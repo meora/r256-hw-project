@@ -1,0 +1,59 @@
+image: docker:latest
+
+stages:
+  - build_images
+  - test
+
+services:
+  - name: docker:dind
+
+gateway_service:
+  stage: build_images
+  rules:
+    - when: manual
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker buildx create --use
+    - docker buildx build --provenance false --platform linux/amd64,linux/arm64 -t gitlab-registry.ozon.dev/alex.pavlenk0o/homework-services/gateway-service:latest --push ./src/Ozon.Route256.Practice.GatewayService
+
+orders_service:
+  stage: build_images
+  rules:
+    - when: manual
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker buildx create --use
+    - docker buildx build --provenance false --platform linux/amd64,linux/arm64 -t gitlab-registry.ozon.dev/alex.pavlenk0o/homework-services/orders-service:latest --push ./src/Ozon.Route256.Practice.OrderService
+
+gateway_service:build:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:6.0
+  needs: []
+  script:
+    - dotnet restore src/Ozon.Route256.Practice.GatewayService/Ozon.Route256.Practice.GatewayService.csproj
+    - dotnet build src/Ozon.Route256.Practice.GatewayService/Ozon.Route256.Practice.GatewayService.csproj --no-restore
+
+gateway_service:test:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:6.0
+  needs: ["gateway_service:build"]
+  script:
+    - dotnet restore src/Ozon.Route256.Practice.GatewayService/Ozon.Route256.Practice.GatewayService.csproj
+    - dotnet build src/Ozon.Route256.Practice.GatewayService/Ozon.Route256.Practice.GatewayService.csproj --no-restore
+
+
+orders_service:build:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:6.0
+  needs: []
+  script:
+    - dotnet restore src/Ozon.Route256.Practice.OrderService/Ozon.Route256.Practice.OrderService.csproj
+    - dotnet build src/Ozon.Route256.Practice.OrderService/Ozon.Route256.Practice.OrderService.csproj --no-restore
+
+orders_service:test:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:6.0
+  needs: ["orders_service:build"]
+  script:
+    - dotnet restore src/Ozon.Route256.Practice.OrderService/Ozon.Route256.Practice.OrderService.csproj
+    - dotnet build src/Ozon.Route256.Practice.OrderService/Ozon.Route256.Practice.OrderService.csproj --no-restore

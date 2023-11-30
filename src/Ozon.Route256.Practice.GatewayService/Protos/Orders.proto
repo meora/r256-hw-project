@@ -1,0 +1,124 @@
+﻿syntax = "proto3";
+option csharp_namespace = "Ozon.Route256.Practice";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "Protos/Customers.proto";
+
+service Orders
+{
+  rpc CancelOrder(CancelOrderByIdRequest) returns (google.protobuf.Empty);
+  rpc GetOrderStatus(GetOrderStatusByIdRequest) returns (OrderStatusResponse);
+  rpc GetOrders(GetOrdersRequest) returns (GetOrdersResponse);
+  rpc GetOrdersByRegion(GetOrdersByRegionRequest) returns (GetOrdersByRegionResponse);
+  rpc GetOrdersByCustomer(GetOrdersByCustomerRequest) returns (GetOrdersByCustomerResponse);
+}
+
+message CancelOrderByIdRequest
+{
+  int64 id = 1;
+}
+
+message GetOrderStatusByIdRequest 
+{
+  int64 id = 1;
+}
+
+message OrderStatusResponse
+{
+  OrderState status = 1;
+}
+
+message GetOrdersRequest
+{
+  repeated string regions = 1;
+  OrderType order_type = 2;
+  int32 page_number = 3;
+  int32 page_size = 4;
+  SortDirection sort_direction = 5;
+  SortField sort_field = 6;
+}
+
+message Order
+{
+  int64 id = 1;
+  int32 quantity = 2;
+  float total_amount = 3;
+  float total_weight = 4;
+  OrderType order_type = 5;
+  google.protobuf.Timestamp order_date = 6;
+  string region = 7;
+  OrderState order_status = 8;
+  string client_name = 9;
+  Address delivery_address = 10;
+  string phone_number = 11;
+  int64 customer_id = 12;
+}
+
+message GetOrdersResponse
+{
+  repeated Order orders = 1;
+}
+
+message GetOrdersByRegionRequest
+{
+  google.protobuf.Timestamp start_datetime = 1;
+  repeated string regions = 2;
+}
+
+message OrdersByRegionAggregation
+{
+  string region = 1;
+  int32 orders_quantity = 2;
+  float total_amount = 3;
+  float total_weight = 4;
+  int32 customers_quantity = 5;
+}
+
+message GetOrdersByRegionResponse
+{
+  repeated OrdersByRegionAggregation orders_by_region_aggregations = 1;
+}
+
+message GetOrdersByCustomerRequest
+{
+  int64 customer_id = 1;
+  google.protobuf.Timestamp start_datetime = 2;
+  int32 page_number = 3;
+  int32 page_size = 4;
+}
+message GetOrdersByCustomerResponse
+{
+  repeated Order orders = 1;
+}
+
+enum OrderState
+{
+  UNKNOWN = 0;
+  CREATED = 1;
+  SENT_TO_CUSTOMER = 2;
+  DELIVERED = 3;
+  LOST = 4;
+  CANCELLED = 5;
+}
+
+enum OrderType
+{
+  UNKNOWN_TYPE = 0;
+  WEBSITE = 1;
+  MOBILE = 2;
+  API = 3;
+}
+
+enum SortDirection 
+{
+  ASC = 0;
+  DESC = 1;
+}
+
+enum SortField 
+{
+  ID = 0;
+  QUANTITY = 1;
+  TOTAL_AMOUNT = 2;
+  ORDER_DATE = 3;
+}

@@ -1,0 +1,13 @@
+﻿syntax = "proto3";
+option csharp_namespace = "Ozon.Route256.Practice";
+import "google/protobuf/empty.proto";
+
+service Regions
+{
+  rpc GetRegions(google.protobuf.Empty) returns (GetRegionsResponse);
+}
+
+message GetRegionsResponse
+{
+  repeated string regions = 1;
+}

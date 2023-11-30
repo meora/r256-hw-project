@@ -1,0 +1,278 @@
+version: "3.9"
+
+services:
+  gateway-service:
+    build:
+      context: ./src/Ozon.Route256.Practice.GatewayService
+      dockerfile: Dockerfile
+    container_name: gateway-service
+    ports:
+      - "3200:80"
+    environment:
+      ROUTE256_CUSTOMER_SERVICE_ADDRES: 'http://host.docker.internal:5082'
+
+  order-service-1:
+    build:
+      context: ./src
+      dockerfile: /Ozon.Route256.Practice.OrderService/Dockerfile
+    container_name: order-service-1
+    ports:
+      - "3301:5004"
+      - "3311:5005"
+    environment:
+      ROUTE256_SD_ADDRESS: 'http://host.docker.internal:6081'
+      ROUTE256_LS_ADDRESS: 'http://host.docker.internal:6091'
+      ROUTE256_CUSTOMER_SERVICE_ADDRESS: 'http://host.docker.internal:5082'
+      ROUTE256_HTTP_PORT: '5004'
+      ROUTE256_GRPC_PORT: '5005'
+      Kafka__Consumers__PreOrders__Config__BootstrapServers: 'broker-1:29091,broker-2:29092'
+      Kafka__Consumers__PreOrders__Config__GroupId: 'order-service'
+      Kafka__Consumers__PreOrders__Config__AutoCommit: 'true'
+      Kafka__Consumers__PreOrders__Topic: pre_orders
+      Kafka__Consumers__OrdersEvents__Config__BootstrapServers: 'broker-1:29091,broker-2:29092'
+      Kafka__Consumers__OrdersEvents__Config__GroupId: 'order-service'
+      Kafka__Consumers__OrdersEvents__Config__AutoCommit: 'true'
+      Kafka__Consumers__OrdersEvents__Topic: 'order_events'
+      Kafka__Producer__NewOrders__Config__BootstrapServers: 'broker-1:29091,broker-2:29092'
+      Kafka__Producer__NewOrders__Topic: 'new_orders'
+      Redis__ConnectionString: 'host.docker.internal:3379'
+      DbOptions__ClusterName: 'orders-cluster'
+      DbOptions__DatabaseName: 'order-service'
+      DbOptions__User: 'order-service'
+      DbOptions__Password: 'order-service'
+    depends_on:
+        - service-discovery
+        - order-service-db-1
+        - order-service-db-2
+        - redis-order-service
+
+  order-service-2:
+    build:
+      context: ./src
+      dockerfile: /Ozon.Route256.Practice.OrderService/Dockerfile
+    container_name: order-service-2
+    ports:
+      - "3302:5004"
+      - "3312:5005"
+    environment:
+      ROUTE256_SD_ADDRESS: 'http://host.docker.internal:6081'
+      ROUTE256_LS_ADDRESS: 'http://host.docker.internal:6091'
+      ROUTE256_CUSTOMER_SERVICE_ADDRESS: 'http://host.docker.internal:5082'
+      ROUTE256_HTTP_PORT: '5004'
+      ROUTE256_GRPC_PORT: '5005'
+      Kafka__Consumers__PreOrders__Config__BootstrapServers: 'broker-1:29091,broker-2:29092'
+      Kafka__Consumers__PreOrders__Config__GroupId: 'order-service'
+      Kafka__Consumers__PreOrders__Config__AutoCommit: 'true'
+      Kafka__Consumers__PreOrders__Topic: pre_orders
+      Kafka__Consumers__OrdersEvents__Config__BootstrapServers: 'broker-1:29091,broker-2:29092'
+      Kafka__Consumers__OrdersEvents__Config__GroupId: 'order-service'
+      Kafka__Consumers__OrdersEvents__Config__AutoCommit: 'true'
+      Kafka__Consumers__OrdersEvents__Topic: 'order_events'
+      Kafka__Producer__NewOrders__Config__BootstrapServers: 'broker-1:29091,broker-2:29092'
+      Kafka__Producer__NewOrders__Topic: 'new_orders'
+      Redis__ConnectionString: 'host.docker.internal:3379'
+      DbOptions__ClusterName: 'orders-cluster'
+      DbOptions__DatabaseName: 'order-service'
+      DbOptions__User: 'order-service'
+      DbOptions__Password: 'order-service'
+    depends_on:
+        - service-discovery
+        - order-service-db-1
+        - order-service-db-2
+        - redis-order-service
+
+  order-service-migrator:
+    build:
+      context: ./src
+      dockerfile: /Ozon.Route256.Practice.OrderService/Dockerfile
+    container_name: order-service-migrator
+    environment:
+      Migrate: 'true'
+      ROUTE256_SD_ADDRESS: 'http://host.docker.internal:6081'
+      DbOptions__ClusterName: 'orders-cluster'
+      DbOptions__DatabaseName: 'order-service'
+      DbOptions__User: 'order-service'
+      DbOptions__Password: 'order-service'
+    depends_on:
+        - order-service-db-1
+        - order-service-db-2
+        
+  customer-service:
+    image: gitlab-registry.ozon.dev/cs/classroom-8/students/practice/customer-service
+    container_name: customer-service
+    ports:
+      - "5081:5004"
+      - "5082:5005"
+    environment:
+      ROUTE256_SD_ADDRESS: "http://host.docker.internal:6081"
+      ROUTE256_HTTP_PORT: '5004'
+      ROUTE256_GRPC_PORT: '5005'
+    depends_on:
+        - service-discovery
+        - customer-service-db
+  
+  orders-generator-web:
+    image: gitlab-registry.ozon.dev/cs/classroom-8/students/practice/orders-generator
+    container_name: orders-generator-web
+    environment:
+      ROUTE256_ORDER_SOURCE: 'Website'
+      ROUTE256_ORDER_REQUEST_TOPIC: 'pre_orders'
+      ROUTE256_KAFKA_BROKERS: 'broker-1:29091,broker-2:29092'
+    depends_on:
+        - broker-1
+        - broker-2
+
+  orders-generator-mobile:
+    image: gitlab-registry.ozon.dev/cs/classroom-8/students/practice/orders-generator
+    container_name: orders-generator-mobile
+    environment:
+      ROUTE256_ORDER_SOURCE: 'Mobile'
+      ROUTE256_ORDER_REQUEST_TOPIC: 'pre_orders'
+      ROUTE256_KAFKA_BROKERS: 'broker-1:29091,broker-2:29092'
+    depends_on:
+        - broker-1
+        - broker-2
+
+  orders-generator-api:
+    image: gitlab-registry.ozon.dev/cs/classroom-8/students/practice/orders-generator
+    container_name: orders-generator-api
+    environment:
+      ROUTE256_ORDER_SOURCE: 'Api'
+      ROUTE256_ORDER_REQUEST_TOPIC: 'pre_orders'
+      ROUTE256_KAFKA_BROKERS: 'broker-1:29091,broker-2:29092'
+    depends_on:
+        - broker-1
+        - broker-2
+
+  service-discovery:
+    image: gitlab-registry.ozon.dev/cs/classroom-8/students/practice/service-discovery
+    container_name: service-discovery
+    ports:
+      - "6081:80"
+    environment:
+      ROUTE256_DB_STATE: 'orders-cluster:0-3:host.docker.internal:5500;orders-cluster:4-7:host.docker.internal:5501'
+      ROUTE256_UPDATE_TIMEOUT: '10'
+  
+  logistic-simulator:
+    image: gitlab-registry.ozon.dev/cs/classroom-8/students/practice/logistics-simulator
+    container_name: logistic-simulator
+    ports:
+      - "6091:80"
+    environment:
+      Kafka__Producer__Config__BootstrapServers: 'broker-1:29091,broker-2:29092'
+      Kafka__Producer__OrderEventTopic: 'order_events'
+      Kafka__Consumers__NewOrder__Config__BootstrapServers: 'broker-1:29091,broker-2:29092'
+      Kafka__Consumers__NewOrder__Config__GroupId: 'logistic-simulator'
+      Kafka__Consumers__NewOrder__Topic: 'new_orders'
+      Redis__ConnectionString: 'host.docker.internal:6379'
+    depends_on:
+        - redis-logistic-simulator
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_SERVER_ID: '1'
+      ZOOKEEPER_CLIENT_PORT: '2181'
+      ZOOKEEPER_SERVERS: 'zookeeper:2888:3888'
+      ZOOKEEPER_PEER_PORT: '2888'
+      ZOOKEEPER_LEADER_PORT: '3888'
+      ZOOKEEPER_INIT_LIMIT: '10'
+      ZOOKEEPER_SYNC_LIMIT: '5'
+      ZOOKEEPER_MAX_CLIENT_CONNS: '5'
+  
+  broker-1:
+    image: confluentinc/cp-kafka:7.3.2
+    container_name: broker-1
+    depends_on:
+      - zookeeper
+    ports:
+      - "29091:29091"
+    environment:
+      KAFKA_BROKER_ID: '1'
+      KAFKA_BROKER_RACK: '1'
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENERS: 'LISTENER_INTERNAL://:9091,LISTENER_LOCAL://:29091'
+      KAFKA_ADVERTISED_LISTENERS: 'LISTENER_INTERNAL://broker-1:9091,LISTENER_LOCAL://localhost:29091'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'LISTENER_INTERNAL'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'LISTENER_INTERNAL:PLAINTEXT,LISTENER_LOCAL:PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: '2'
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: '2'
+    restart: always
+  
+  broker-2:
+    image: confluentinc/cp-kafka:7.3.2
+    container_name: broker-2
+    depends_on:
+      - zookeeper
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: '2'
+      KAFKA_BROKER_RACK: '2'
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENERS: 'LISTENER_INTERNAL://:9091,LISTENER_LOCAL://:29092'
+      KAFKA_ADVERTISED_LISTENERS: 'LISTENER_INTERNAL://broker-2:9091,LISTENER_LOCAL://localhost:29092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'LISTENER_INTERNAL'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'LISTENER_INTERNAL:PLAINTEXT,LISTENER_LOCAL:PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: '2'
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: '2'
+    restart: always
+      
+  customer-service-db:
+    image: postgres:latest
+    container_name: customer-service-db
+    environment:
+      POSTGRES_DB: 'customer-service'
+      POSTGRES_USER: 'customer-service'
+      POSTGRES_PASSWORD: 'customer-service'
+    ports:
+      - "5400:5432"
+    volumes:
+      - customer-service-db:/var/lib/postgresql/data
+  
+  order-service-db-1:
+    image: postgres:latest
+    container_name: order-service-db-1
+    environment:
+      POSTGRES_DB: 'order-service'
+      POSTGRES_USER: 'order-service'
+      POSTGRES_PASSWORD: 'order-service'
+    ports:
+      - "5500:5432"
+    volumes:
+      - order-service-db-1:/var/lib/postgresql/data
+  
+  order-service-db-2:
+    image: postgres:latest
+    container_name: order-service-db-2
+    environment:
+      POSTGRES_DB: 'order-service'
+      POSTGRES_USER: 'order-service'
+      POSTGRES_PASSWORD: 'order-service'
+    ports:
+      - "5501:5432"
+    volumes:
+      - order-service-db-2:/var/lib/postgresql/data
+
+  redis-order-service:
+    image: redis:latest
+    restart: always
+    ports:
+      - "3379:6379"
+
+  redis-logistic-simulator:
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  customer-service-db:
+    name: customer-service-db
+  order-service-db-1:
+    name: order-service-db-1
+  order-service-db-2:
+    name: order-service-db-2

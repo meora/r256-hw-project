@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+        <PackageReference Include="Grpc.AspNetCore" Version="2.57.0" />
+        <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.57.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Protobuf Include="Protos\Orders.proto" GrpcServices="Server"/>
+      <Protobuf Include="Protos\Regions.proto" GrpcServices="Server"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Ozon.Route256.Practice.OrderService.Application\Ozon.Route256.Practice.OrderService.Application.csproj" />
+      <ProjectReference Include="..\Ozon.Route256.Practice.OrderService.Infrastructure\Ozon.Route256.Practice.OrderService.Infrastructure.csproj" />
+    </ItemGroup>
+</Project>
